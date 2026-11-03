@@ -1,18 +1,19 @@
+import sqlite3
 from fastapi_offline import FastAPIOffline
 
 app = FastAPIOffline()
 
 def load_students():
-    rows = []
-    with open("data.csv") as f:
-        lines = f.readlines()
-    for line in lines[1:]:
-        line = line.strip()
-        if not line:
-            continue
-        name, score = line.split(",")
-        rows.append({"name": name, "score": float(score)})
-    return rows
+    conn = sqlite3.connect("students.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, score FROM students")
+    rows = cursor.fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        result.append({"name": row[0], "score": row[1]})
+    return result
 
 @app.get("/")
 def read_root():
