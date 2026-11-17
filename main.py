@@ -1,3 +1,5 @@
+import os
+from openai import OpenAI
 import sqlite3
 from fastapi_offline import FastAPIOffline
 
@@ -33,3 +35,29 @@ def get_stats():
         if s["score"] > best["score"]:
             best = s
     return {"average": total / len(students), "count": len(students), "best": best}
+
+@app.post("/students")
+def add_student(name: str, score: float):
+    conn = sqlite3.connect("students.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO students (name, score) VALUES (?, ?)", (name, score))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+client = OpenAI(
+    api_key=os.environ["DEEPSEEK_API_KEY"],
+    base_url="https://api.deepseek.com",
+)
+
+@app.post("/ask")
+def ask(question: str):
+    resp = client.chat.completions.create(
+        model="deepseek-chat",
+        messages=[
+            {"role": "system", "content": "你是一个简洁的助手，回答控制在三句话以内。"},
+            {"role": "user", "content": question},
+        ],
+    )
+    answer = resp.choices[0].message.content
+    return {"answer": answer}
